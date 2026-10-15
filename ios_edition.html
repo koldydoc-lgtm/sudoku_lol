@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#F2F2F7">
+  <title>Судоку</title>
+  <style>
+    :root {
+      --bg-app: #F2F2F7;
+      --bg-card: #FFFFFF;
+      --grid-border-outer: #1E293B;
+      --grid-border-block: #334155;
+      --grid-border-cell: #E2E8F0;
+      
+      --text-primary: #0F172A;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+      
+      --accent: #007AFF;
+      --accent-entered: #2563EB;
+      --accent-selected: #BFDBFE;
+      --accent-same-num: #DBEAFE;
+      --accent-related: #F1F5F9;
+      
+      --error-text: #EF4444;
+      --error-bg: #FEE2E2;
+      
+      --success: #10B981;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+      --shadow-modal: 0 20px 38px rgba(15, 23, 42, 0.18);
+      
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-app);
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 430px;
+      height: 100dvh;
+      margin: 0 auto;
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    /* Верхняя панель навигации */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 42px;
+      flex-shrink: 0;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-title {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--text-primary);
+    }
+
+    .diff-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0, 122, 255, 0.1);
+      color: var(--accent);
+      border: none;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 32px;
+      transition: transform 0.12s ease, background-color 0.15s ease;
+    }
+
+    .diff-pill:active {
+      transform: scale(0.95);
+      background: rgba(0, 122, 255, 0.18);
+    }
+
+    .diff-pill svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: none;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.12s ease, background-color 0.15s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.93);
+      background: #F1F5F9;
+    }
+
+    .icon-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .new-game-top-btn {
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+      transition: transform 0.12s ease, opacity 0.15s ease;
+    }
+
+    .new-game-top-btn:active {
+      transform: scale(0.95);
+      opacity: 0.9;
+    }
+
+    /* Статус-бар (Ошибки, Рекорд, Таймер) */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 6px 12px;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .stat-item.center {
+      align-items: center;
+    }
+
+    .stat-item.right {
+      align-items: flex-end;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 14px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hearts-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 2px;
+    }
+
+    .heart-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--error-text);
+      transition: transform 0.25s ease, background-color 0.25s ease;
+    }
+
+    .heart-dot.lost {
+      background: #CBD5E1;
+      transform: scale(0.8);
+    }
+
+    .timer-btn {
+      background: none;
+      border: none;
+      padding: 2px 0;
+      font-family: inherit;
+      color: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .timer-btn svg {
+      width: 14px;
+      height: 14px;
+      color: var(--accent);
+    }
+
+    /* Контейнер доски Судоку */
+    .board-wrapper {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+      width: 100%;
+    }
+
+    .board-container {
+      position: relative;
+      /* Адаптивный квадрат, гарантированно помещающийся на iPhone 13 mini */
+      width: min(100%, calc(100dvh - 285px));
+      aspect-ratio: 1 / 1;
+      background: var(--bg-card);
+      border: 2.5px solid var(--grid-border-outer);
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr);
+    }
+
+    .cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      border-right: 1px solid var(--grid-border-cell);
+      border-bottom: 1px solid var(--grid-border-cell);
+      font-size: clamp(18px, 5.4vw, 24px);
+      line-height: 1;
+      cursor: pointer;
+      transition: background-color 0.08s ease, transform 0.08s ease;
+    }
+
+    /* Жирные границы блоков 3x3 */
+    .cell[data-col="2"],
+    .cell[data-col="5"] {
+      border-right: 2px solid var(--grid-border-block);
+    }
+
+    .cell[data-col="8"] {
+      border-right: none;
+    }
+
+    .cell[data-row="2"],
+    .cell[data-row="5"] {
+      border-bottom: 2px solid var(--grid-border-block);
+    }
+
+    .cell[data-row="8"] {
+      border-bottom: none;
+    }
+
+    /* Состояния клеток */
+    .cell.is-related {
+      background-color: var(--accent-related);
+    }
+
+    .cell.is-same-num {
+      background-color: var(--accent-same-num);
+    }
+
+    .cell.is-selected {
+      background-color: var(--accent-selected);
+      box-shadow: inset 0 0 0 2px var(--accent);
+      z-index: 2;
+    }
+
+    .cell.is-error {
+      background-color: var(--error-bg) !important;
+      color: var(--error-text) !important;
+    }
+
+    .cell.is-given {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .cell.is-user {
+      color: var(--accent-entered);
+      font-weight: 500;
+    }
+
+    .cell.pop-anim {
+      animation: cellPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .cell.shake-anim {
+      animation: cellShake 0.35s ease;
+    }
+
+    @keyframes cellPop {
+      0% { transform: scale(0.84); }
+      60% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes cellShake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-3px); }
+      40%, 80% { transform: translateX(3px); }
+    }
+
+    /* Мини-сетка карандашных заметок 3x3 */
+    .notes-grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding: 2px;
+      pointer-events: none;
+    }
+
+    .note-digit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(8px, 2.3vw, 10px);
+      font-weight: 600;
+      color: var(--text-secondary);
+      line-height: 1;
+    }
+
+    .note-digit.highlight-note {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    /* Нижний блок управления (Инструменты + Цифровая клавиатура) */
+    .controls-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .tools-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .tool-btn {
+      position: relative;
+      height: 52px;
+      background: var(--bg-card);
+      border: none;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      color: var(--text-primary);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.12s ease, background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .tool-btn:active {
+      transform: scale(0.95);
+      background-color: #E2E8F0;
+    }
+
+    .tool-btn svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+    }
+
+    .tool-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* Активный переключатель заметок */
+    .tool-btn.active-mode {
+      background: var(--accent);
+      color: #FFFFFF;
+      box-shadow: 0 3px 10px rgba(0, 122, 255, 0.3);
+    }
+
+    .tool-btn.active-mode .tool-label {
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    /* Бейджи для Заметок и Подсказок */
+    .tool-badge {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      padding: 1px 5px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      background: #E2E8F0;
+      color: var(--text-secondary);
+    }
+
+    .tool-btn.active-mode .tool-badge {
+      background: #FFFFFF;
+      color: var(--accent);
+    }
+
+    .tool-badge.accent-badge {
+      background: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .tool-badge.empty-badge {
+      background: #CBD5E1;
+      color: #64748B;
+    }
+
+    /* Цифровая клавиатура 1-9 */
+    .numpad-row {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 5px;
+    }
+
+    .num-btn {
+      height: 54px;
+      background: var(--bg-card);
+      border: none;
+      border-radius: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.1s ease, background-color 0.15s ease, opacity 0.2s ease;
+      min-width: 34px;
+    }
+
+    .num-btn:active {
+      transform: scale(0.93);
+      background-color: var(--accent-selected);
+    }
+
+    .num-digit {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+      line-height: 1.05;
+    }
+
+    .num-remain {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* Режим заметок меняет оттенок цифр на клавиатуре */
+    .numpad-row.notes-active .num-digit {
+      color: var(--text-secondary);
+      font-size: 19px;
+    }
+
+    /* Когда все 9 цифр расставлены */
+    .num-btn.completed {
+      opacity: 0.28;
+      pointer-events: none;
+      box-shadow: none;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Модальные окна */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 345px;
+      background: var(--bg-card);
+      border-radius: 22px;
+      padding: 20px 18px;
+      box-shadow: var(--shadow-modal);
+      transform: scale(0.94) translateY(8px);
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-align: center;
+    }
+
+    .modal-backdrop.open .modal-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .modal-icon.blue { background: rgba(0, 122, 255, 0.12); color: var(--accent); }
+    .modal-icon.green { background: rgba(16, 185, 129, 0.14); color: var(--success); }
+    .modal-icon.red { background: rgba(239, 68, 68, 0.12); color: var(--error-text); }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+
+    .modal-subtitle {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+
+    /* Список уровней сложности */
+    .diff-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .diff-option-btn {
+      width: 100%;
+      min-height: 44px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1.5px solid #E2E8F0;
+      background: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: transform 0.1s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .diff-option-btn:active {
+      transform: scale(0.97);
+    }
+
+    .diff-option-btn.current-diff {
+      border-color: var(--accent);
+      background: rgba(0, 122, 255, 0.06);
+    }
+
+    .diff-option-left {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .diff-option-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .diff-option-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .diff-option-record {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(0, 122, 255, 0.1);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .modal-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      min-height: 46px;
+      border: none;
+      border-radius: 13px;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.15s ease;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      min-height: 44px;
+      border: none;
+      border-radius: 13px;
+      background: #F1F5F9;
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, background-color 0.15s ease;
+    }
+
+    .btn-secondary:active {
+      transform: scale(0.97);
+      background: #E2E8F0;
+    }
+
+    /* Статистика внутри окна Победы */
+    .win-stats-box {
+      background: #F8FAFC;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .win-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .win-stat-row span:first-child {
+      color: var(--text-secondary);
+    }
+
+    .win-stat-row span:last-child {
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .new-record-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      margin-top: 2px;
+    }
+
+    /* Скрытие цифр на паузе */
+    .board-container.paused .cell {
+      color: transparent !important;
+      background: var(--bg-card) !important;
+      box-shadow: none !important;
+    }
+
+    .board-container.paused .notes-grid {
+      visibility: hidden;
+    }
+
+    /* Адаптация под очень компактные экраны (высота <= 700px) */
+    @media (max-height: 700px) {
+      .app-shell { gap: 4px; }
+      .top-bar { height: 36px; }
+      .stats-bar { padding: 4px 10px; }
+      .tool-btn { height: 44px; }
+      .num-btn { height: 46px; }
+      .board-container { width: min(100%, calc(100dvh - 245px)); }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="app-shell">
+    <!-- Шапка приложения -->
+    <header class="top-bar">
+      <div class="brand-group">
+        <h1 class="app-title">Судоку</h1>
+        <button id="diffSelectBtn" class="diff-pill" type="button" aria-label="Выбрать сложность">
+          <span id="currentDiffLabel">Средний</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <div class="top-actions">
+        <button id="soundToggleBtn" class="icon-btn" type="button" aria-label="Звук">
+          <svg id="soundIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="soundIconOff" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+        <button id="newGameTopBtn" class="new-game-top-btn" type="button">Новая</button>
+      </div>
+    </header>
+
+    <!-- Информационная панель -->
+    <section class="stats-bar" aria-label="Статистика партии">
+      <div class="stat-item">
+        <span class="stat-label">Ошибки</span>
+        <div class="stat-value">
+          <span id="mistakesText">0/3</span>
+          <div class="hearts-row" id="heartsContainer">
+            <span class="heart-dot"></span>
+            <span class="heart-dot"></span>
+            <span class="heart-dot"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-item center">
+        <span class="stat-label">Рекорд</span>
+        <div class="stat-value" id="bestTimeText">--:--</div>
+      </div>
+
+      <div class="stat-item right">
+        <span class="stat-label">Время</span>
+        <button id="pauseBtn" class="stat-value timer-btn" type="button" aria-label="Пауза">
+          <span id="timerText">00:00</span>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+            <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Игровое поле 9x9 -->
+    <section class="board-wrapper">
+      <div id="sudokuBoard" class="board-container" role="grid" aria-label="Поле Судоку 9 на 9"></div>
+    </section>
+
+    <!-- Инструменты и цифры -->
+    <section class="controls-section">
+      <div class="tools-row">
+        <button id="undoBtn" class="tool-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"></path>
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+          </svg>
+          <span class="tool-label">Отмена</span>
+        </button>
+
+        <button id="eraseBtn" class="tool-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"></path>
+            <path d="M22 21H7"></path>
+            <path d="m5 11 9 9"></path>
+          </svg>
+          <span class="tool-label">Стереть</span>
+        </button>
+
+        <button id="notesBtn" class="tool-btn" type="button">
+          <span id="notesBadge" class="tool-badge">ВЫКЛ</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            <path d="m15 5 4 4"></path>
+          </svg>
+          <span class="tool-label">Заметки</span>
+        </button>
+
+        <button id="hintBtn" class="tool-btn" type="button">
+          <span id="hintBadge" class="tool-badge accent-badge">3</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path>
+            <path d="M9 18h6"></path>
+            <path d="M10 22h4"></path>
+          </svg>
+          <span class="tool-label">Подсказка</span>
+        </button>
+      </div>
+
+      <div id="numpadRow" class="numpad-row">
+        <!-- Кнопки 1–9 генерируются через JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Модальное окно: Выбор сложности -->
+  <div id="difficultyModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 class="modal-title">Уровень сложности</h2>
+      <p class="modal-subtitle">Выберите сложность для начала новой партии</p>
+      <div id="diffOptionsList" class="diff-list"></div>
+      <button id="closeDiffModalBtn" class="btn-secondary" type="button">Продолжить текущую</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Пауза -->
+  <div id="pauseModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-icon blue">⏸</div>
+      <h2 class="modal-title">Игра на паузе</h2>
+      <p class="modal-subtitle">Таймер остановлен. Отдохните и возвращайтесь к решению!</p>
+      <div class="modal-btn-group">
+        <button id="resumeGameBtn" class="btn-primary" type="button">Продолжить игру</button>
+        <button id="restartFromPauseBtn" class="btn-secondary" type="button">Начать эту же заново</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Победа -->
+  <div id="winModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-icon green">🏆</div>
+      <h2 class="modal-title">Блестящая победа!</h2>
+      <p class="modal-subtitle">Головоломка успешно решена</p>
+      <div class="win-stats-box">
+        <div class="win-stat-row">
+          <span>Сложность</span>
+          <span id="winDiffText">Средний</span>
+        </div>
+        <div class="win-stat-row">
+          <span>Время партии</span>
+          <span id="winTimeText">02:45</span>
+        </div>
+        <div class="win-stat-row">
+          <span>Лучшее время</span>
+          <span id="winBestText">02:10</span>
+        </div>
+        <div id="newRecordBanner" style="display:none;">
+          <span class="new-record-badge">★ Новый рекорд!</span>
+        </div>
+      </div>
+      <div class="modal-btn-group">
+        <button id="winNewGameBtn" class="btn-primary" type="button">Новая игра</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Поражение (3 ошибки) -->
+  <div id="gameOverModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-icon red">✕</div>
+      <h2 class="modal-title">Игра окончена</h2>
+      <p class="modal-subtitle">Вы допустили 3 ошибки. Хотите попробовать решить эту же партию заново или начать новую?</p>
+      <div class="modal-btn-group">
+        <button id="retrySameBoardBtn" class="btn-primary" type="button">Попробовать заново</button>
+        <button id="gameOverNewBtn" class="btn-secondary" type="button">Выбрать другую игру</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ==========================================
+         КОНФИГУРАЦИЯ УРОВНЕЙ СЛОЖНОСТИ
+         ========================================== */
+      const DIFFICULTIES = [
+        { id: 'beginner', name: 'Очень лёгкий', desc: 'Для разминки (~30 пустых)', holes: 30 },
+        { id: 'easy',     name: 'Лёгкий',       desc: 'Быстрая партия (~36 пустых)', holes: 36 },
+        { id: 'medium',   name: 'Средний',      desc: 'Золотая середина (~43 пустых)', holes: 43 },
+        { id: 'hard',     name: 'Сложный',      desc: 'Требует внимания (~49 пустых)', holes: 49 },
+        { id: 'expert',   name: 'Эксперт',      desc: 'Нужны заметки (~53 пустых)', holes: 53 },
+        { id: 'master',   name: 'Мастер',       desc: 'Экстремальный вызов (~57 пустых)', holes: 57 }
+      ];
+
+      const STORAGE_STATE_KEY = 'sudoku_ios_saved_game_v1';
+      const STORAGE_RECORDS_KEY = 'sudoku_ios_best_times_v1';
+
+      /* ==========================================
+         СОСТОЯНИЕ ИГРЫ
+         ========================================== */
+      let state = {
+        difficultyId: 'medium',
+        initial: [],      // Начальная сетка 81 элемент (0 - пусто)
+        board: [],        // Текущая сетка 81 элемент
+        solution: [],     // Решение 81 элемент
+        notes: [],        // Массив из 81 массива заметок (например [1, 4])
+        selectedIdx: -1,  // Выбранная клетка 0..80
+        notesMode: false,
+        mistakes: 0,
+        maxMistakes: 3,
+        hints: 3,
+        seconds: 0,
+        paused: false,
+        gameOver: false,
+        won: false,
+        soundEnabled: true,
+        history: []       // Стек для Undo
+      };
+
+      let bestTimes = {};
+      let timerInterval = null;
+      let audioCtx = null;
+
+      /* ==========================================
+         DOM ЭЛЕМЕНТЫ
+         ========================================== */
+      const boardEl = document.getElementById('sudokuBoard');
+      const numpadRowEl = document.getElementById('numpadRow');
+      const currentDiffLabelEl = document.getElementById('currentDiffLabel');
+      const mistakesTextEl = document.getElementById('mistakesText');
+      const heartsContainerEl = document.getElementById('heartsContainer');
+      const bestTimeTextEl = document.getElementById('bestTimeText');
+      const timerTextEl = document.getElementById('timerText');
+      const notesBtnEl = document.getElementById('notesBtn');
+      const notesBadgeEl = document.getElementById('notesBadge');
+      const hintBadgeEl = document.getElementById('hintBadge');
+      const soundIconOnEl = document.getElementById('soundIconOn');
+      const soundIconOffEl = document.getElementById('soundIconOff');
+
+      // Модалки
+      const difficultyModal = document.getElementById('difficultyModal');
+      const diffOptionsList = document.getElementById('diffOptionsList');
+      const pauseModal = document.getElementById('pauseModal');
+      const winModal = document.getElementById('winModal');
+      const gameOverModal = document.getElementById('gameOverModal');
+
+      /* ==========================================
+         ТАКТИЛЬНЫЙ ОТКЛИК И СИНТЕЗАТОР ЗВУКА
+         ========================================== */
+      function triggerHaptic(pattern) {
+        try {
+          if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+          }
+        } catch (e) {
+          // Игнорируем, если не поддерживается на устройстве
+        }
+      }
+
+      function playTone(type) {
+        if (!state.soundEnabled) return;
+        try {
+          if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          if (type === 'tap') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(520, now);
+            gain.gain.setValueAtTime(0.04, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+            osc.start(now);
+            osc.stop(now + 0.05);
+          } else if (type === 'place') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(660, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.07);
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.085);
+          } else if (type === 'error') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(210, now);
+            osc.frequency.setValueAtTime(165, now + 0.08);
+            gain.gain.setValueAtTime(0.09, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.start(now);
+            osc.stop(now + 0.23);
+          } else if (type === 'win') {
+            const notes = [523.25, 659.25, 783.99, 1046.5];
+            notes.forEach((freq, idx) => {
+              const o = audioCtx.createOscillator();
+              const g = audioCtx.createGain();
+              o.connect(g);
+              g.connect(audioCtx.destination);
+              o.type = 'sine';
+              o.frequency.setValueAtTime(freq, now + idx * 0.09);
+              g.gain.setValueAtTime(0.07, now + idx * 0.09);
+              g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.28);
+              o.start(now + idx * 0.09);
+              o.stop(now + idx * 0.09 + 0.3);
+            });
+          }
+        } catch (e) {
+          // Беззвучный fallback
+        }
+      }
+
+      /* ==========================================
+         АЛГОРИТМИЧЕСКИЙ ГЕНЕРАТОР СУДОКУ (<50 мс)
+         ========================================== */
+      function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = (Math.random() * (i + 1)) | 0;
+          const tmp = arr[i];
+          arr[i] = arr[j];
+          arr[j] = tmp;
+        }
+        return arr;
+      }
+
+      // Битовая маска для сверхбыстрой проверки доступных цифр в строке/столбце/блоке
+      function getBoxIndex(r, c) {
+        return ((r / 3) | 0) * 3 + ((c / 3) | 0);
+      }
+
+      function generateFullSolution() {
+        const grid = new Array(81).fill(0);
+        const rowMask = new Array(9).fill(0);
+        const colMask = new Array(9).fill(0);
+        const boxMask = new Array(9).fill(0);
+
+        function fillCell(idx) {
+          if (idx === 81) return true;
+          const r = (idx / 9) | 0;
+          const c = idx % 9;
+          const b = getBoxIndex(r, c);
+          const used = rowMask[r] | colMask[c] | boxMask[b];
+
+          const nums = shuffleArray([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+          for (let i = 0; i < 9; i++) {
+            const n = nums[i];
+            const bit = 1 << n;
+            if (!(used & bit)) {
+              grid[idx] = n;
+              rowMask[r] |= bit;
+              colMask[c] |= bit;
+              boxMask[b] |= bit;
+
+              if (fillCell(idx + 1)) return true;
+
+              grid[idx] = 0;
+              rowMask[r] &= ~bit;
+              colMask[c] &= ~bit;
+              boxMask[b] &= ~bit;
+            }
+          }
+          return false;
+        }
+
+        fillCell(0);
+        return grid;
+      }
+
+      // Подсчёт количества решений (до 2) с выбором клетки с минимумом кандидатов (MRV)
+      function countSolutions(board, limit) {
+        const grid = board.slice();
+        const rowMask = new Array(9).fill(0);
+        const colMask = new Array(9).fill(0);
+        const boxMask = new Array(9).fill(0);
+
+        for (let i = 0; i < 81; i++) {
+          const val = grid[i];
+          if (val !== 0) {
+            const r = (i / 9) | 0;
+            const c = i % 9;
+            const b = getBoxIndex(r, c);
+            const bit = 1 << val;
+            rowMask[r] |= bit;
+            colMask[c] |= bit;
+            boxMask[b] |= bit;
+          }
+        }
+
+        let solutions = 0;
+
+        function solve() {
+          if (solutions >= limit) return;
+
+          // Находим пустую клетку с наименьшим числом возможных цифр (MRV эвристика)
+          let bestIdx = -1;
+          let minCount = 10;
+          let bestAvailMask = 0;
+
+          for (let i = 0; i < 81; i++) {
+            if (grid[i] === 0) {
+              const r = (i / 9) | 0;
+              const c = i % 9;
+              const b = getBoxIndex(r, c);
+              const used = rowMask[r] | colMask[c] | boxMask[b];
+              const avail = (~used) & 0x3FE; // биты 1..9
+              if (avail === 0) return; // тупик
+
+              // Считаем число единичных бит
+              let temp = avail;
+              let cnt = 0;
+              while (temp) {
+                temp &= (temp - 1);
+                cnt++;
+              }
+
+              if (cnt < minCount) {
+                minCount = cnt;
+                bestIdx = i;
+                bestAvailMask = avail;
+                if (cnt === 1) break;
+              }
+            }
+          }
+
+          if (bestIdx === -1) {
+            solutions++;
+            return;
+          }
+
+          const r = (bestIdx / 9) | 0;
+          const c = bestIdx % 9;
+          const b = getBoxIndex(r, c);
+
+          for (let n = 1; n <= 9; n++) {
+            const bit = 1 << n;
+            if (bestAvailMask & bit) {
+              grid[bestIdx] = n;
+              rowMask[r] |= bit;
+              colMask[c] |= bit;
+              boxMask[b] |= bit;
+
+              solve();
+
+              grid[bestIdx] = 0;
+              rowMask[r] &= ~bit;
+              colMask[c] &= ~bit;
+              boxMask[b] &= ~bit;
+
+              if (solutions >= limit) return;
+            }
+          }
+        }
+
+        solve();
+        return solutions;
+      }
+
+      function generateSudokuPuzzle(holesTarget) {
+        const solution = generateFullSolution();
+        const puzzle = solution.slice();
+
+        // Создаём симметричные пары индексов + случайный порядок для красивой сетки
+        const indices = [];
+        for (let i = 0; i < 81; i++) indices.push(i);
+        shuffleArray(indices);
+
+        let removed = 0;
+        const startTime = performance.now();
+
+        for (let i = 0; i < indices.length; i++) {
+          if (removed >= holesTarget) break;
+          // Предохранитель времени, чтобы генерация всегда была быстрее 60 мс
+          if (performance.now() - startTime > 55) break;
+
+          const idx = indices[i];
+          if (puzzle[idx] === 0) continue;
+
+          const backup = puzzle[idx];
+          puzzle[idx] = 0;
+
+          if (countSolutions(puzzle, 2) === 1) {
+            removed++;
+          } else {
+            puzzle[idx] = backup;
+          }
+        }
+
+        return { puzzle, solution };
+      }
+
+      /* ==========================================
+         ИНИЦИАЛИЗАЦИЯ И ОТРИСОВКА DOM
+         ========================================== */
+      function buildBoardDOM() {
+        boardEl.innerHTML = '';
+        for (let i = 0; i < 81; i++) {
+          const r = (i / 9) | 0;
+          const c = i % 9;
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.idx = i;
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.setAttribute('role', 'gridcell');
+
+          cell.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            selectCell(i);
+          });
+
+          boardEl.appendChild(cell);
+        }
+      }
+
+      function buildNumpadDOM() {
+        numpadRowEl.innerHTML = '';
+        for (let n = 1; n <= 9; n++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'num-btn';
+          btn.dataset.num = n;
+          btn.innerHTML = `
+            <span class="num-digit">${n}</span>
+            <span class="num-remain" id="remain-${n}">9</span>
+          `;
+          btn.addEventListener('click', () => handleNumberInput(n));
+          numpadRowEl.appendChild(btn);
+        }
+      }
+
+      function renderCellContent(cellEl, idx, selectedNumber) {
+        const val = state.board[idx];
+        const given = state.initial[idx] !== 0;
+
+        cellEl.classList.remove('is-given', 'is-user', 'is-error');
+
+        if (val !== 0) {
+          cellEl.textContent = val;
+          if (given) {
+            cellEl.classList.add('is-given');
+          } else {
+            cellEl.classList.add('is-user');
+            if (val !== state.solution[idx]) {
+              cellEl.classList.add('is-error');
+            }
+          }
+        } else {
+          const cellNotes = state.notes[idx];
+          if (cellNotes && cellNotes.length > 0) {
+            let notesHTML = '<div class="notes-grid">';
+            for (let n = 1; n <= 9; n++) {
+              const hasNote = cellNotes.includes(n);
+              const isHighlighted = hasNote && selectedNumber === n;
+              notesHTML += `<span class="note-digit ${isHighlighted ? 'highlight-note' : ''}">${hasNote ? n : ''}</span>`;
+            }
+            notesHTML += '</div>';
+            cellEl.innerHTML = notesHTML;
+          } else {
+            cellEl.textContent = '';
+          }
+        }
+      }
+
+      function updateUI(animateIdx = -1, animClass = '') {
+        const diffObj = DIFFICULTIES.find(d => d.id === state.difficultyId) || DIFFICULTIES[2];
+        currentDiffLabelEl.textContent = diffObj.name;
+
+        // Ошибки и индикаторы жизней
+        mistakesTextEl.textContent = `${state.mistakes}/${state.maxMistakes}`;
+        const heartDots = heartsContainerEl.querySelectorAll('.heart-dot');
+        heartDots.forEach((dot, idx) => {
+          if (idx < state.maxMistakes - state.mistakes) {
+            dot.classList.remove('lost');
+          } else {
+            dot.classList.add('lost');
+          }
+        });
+
+        // Рекорд сложности
+        const bestSec = bestTimes[state.difficultyId];
+        bestTimeTextEl.textContent = bestSec ? formatTime(bestSec) : '--:--';
+
+        // Таймер
+        timerTextEl.textContent = formatTime(state.seconds);
+
+        // Индикатор режима Заметок
+        if (state.notesMode) {
+          notesBtnEl.classList.add('active-mode');
+          notesBadgeEl.textContent = 'ВКЛ';
+          numpadRowEl.classList.add('notes-active');
+        } else {
+          notesBtnEl.classList.remove('active-mode');
+          notesBadgeEl.textContent = 'ВЫКЛ';
+          numpadRowEl.classList.remove('notes-active');
+        }
+
+        // Бейдж подсказок
+        hintBadgeEl.textContent = state.hints;
+        if (state.hints === 0) {
+          hintBadgeEl.classList.remove('accent-badge');
+          hintBadgeEl.classList.add('empty-badge');
+        } else {
+          hintBadgeEl.classList.add('accent-badge');
+          hintBadgeEl.classList.remove('empty-badge');
+        }
+
+        // Иконка звука
+        soundIconOnEl.style.display = state.soundEnabled ? 'block' : 'none';
+        soundIconOffEl.style.display = state.soundEnabled ? 'none' : 'block';
+
+        // Вычисляем выбранную координату и цифру для подсветки
+        const selIdx = state.selectedIdx;
+        const selRow = selIdx >= 0 ? ((selIdx / 9) | 0) : -1;
+        const selCol = selIdx >= 0 ? (selIdx % 9) : -1;
+        const selBox = selIdx >= 0 ? getBoxIndex(selRow, selCol) : -1;
+        const selNum = selIdx >= 0 ? state.board[selIdx] : 0;
+
+        // Отрисовка клеток
+        const cells = boardEl.children;
+        for (let i = 0; i < 81; i++) {
+          const cell = cells[i];
+          const r = (i / 9) | 0;
+          const c = i % 9;
+          const b = getBoxIndex(r, c);
+
+          cell.classList.remove('is-selected', 'is-related', 'is-same-num');
+
+          if (i === selIdx) {
+            cell.classList.add('is-selected');
+          } else if (selNum !== 0 && state.board[i] === selNum) {
+            cell.classList.add('is-same-num');
+          } else if (selIdx >= 0 && (r === selRow || c === selCol || b === selBox)) {
+            cell.classList.add('is-related');
+          }
+
+          renderCellContent(cell, i, selNum);
+
+          if (i === animateIdx && animClass) {
+            cell.classList.remove('pop-anim', 'shake-anim');
+            void cell.offsetWidth; // перезапуск CSS анимации
+            cell.classList.add(animClass);
+          }
+        }
+
+        // Считаем оставшиеся цифры для клавиатуры 1-9
+        const counts = new Array(10).fill(0);
+        for (let i = 0; i < 81; i++) {
+          const v = state.board[i];
+          if (v !== 0 && v === state.solution[i]) {
+            counts[v]++;
+          }
+        }
+
+        const numBtns = numpadRowEl.children;
+        for (let n = 1; n <= 9; n++) {
+          const remain = Math.max(0, 9 - counts[n]);
+          const btn = numBtns[n - 1];
+          const remainSpan = document.getElementById(`remain-${n}`);
+          if (remainSpan) remainSpan.textContent = remain;
+          if (remain === 0) {
+            btn.classList.add('completed');
+          } else {
+            btn.classList.remove('completed');
+          }
+        }
+      }
+
+      /* ==========================================
+         ИГРОВАЯ МЕХАНИКА И ДЕЙСТВИЯ
+         ========================================== */
+      function selectCell(idx) {
+        if (state.paused || state.gameOver || state.won) return;
+        state.selectedIdx = idx;
+        playTone('tap');
+        updateUI();
+      }
+
+      function saveHistorySnapshot() {
+        state.history.push({
+          board: state.board.slice(),
+          notes: state.notes.map(n => n.slice())
+        });
+        if (state.history.length > 60) {
+          state.history.shift();
+        }
+      }
+
+      function removePeerNotes(idx, digit) {
+        const r = (idx / 9) | 0;
+        const c = idx % 9;
+        const b = getBoxIndex(r, c);
+
+        for (let i = 0; i < 81; i++) {
+          const ir = (i / 9) | 0;
+          const ic = i % 9;
+          const ib = getBoxIndex(ir, ic);
+          if (ir === r || ic === c || ib === b) {
+            const pos = state.notes[i].indexOf(digit);
+            if (pos !== -1) {
+              state.notes[i].splice(pos, 1);
+            }
+          }
+        }
+      }
+
+      function handleNumberInput(digit) {
+        if (state.paused || state.gameOver || state.won) return;
+        const idx = state.selectedIdx;
+        if (idx < 0) return;
+
+        // Начальные клетки менять нельзя
+        if (state.initial[idx] !== 0) return;
+
+        // Если в клетке уже стоит правильная цифра, не перезаписываем её
+        if (state.board[idx] === state.solution[idx]) return;
+
+        // РЕЖИМ ЗАМЕТОК
+        if (state.notesMode) {
+          saveHistorySnapshot();
+          // Если в клетке стояла ошибочная цифра, очищаем её перед установкой заметки
+          if (state.board[idx] !== 0) {
+            state.board[idx] = 0;
+          }
+          const cellNotes = state.notes[idx];
+          const existingPos = cellNotes.indexOf(digit);
+          if (existingPos === -1) {
+            cellNotes.push(digit);
+            cellNotes.sort((a, b) => a - b);
+          } else {
+            cellNotes.splice(existingPos, 1);
+          }
+          triggerHaptic(8);
+          playTone('tap');
+          saveStateToStorage();
+          updateUI();
+          return;
+        }
+
+        // ОБЫЧНЫЙ РЕЖИМ ВВОДА ЦИФРЫ
+        if (state.board[idx] === digit) {
+          // Повторное нажатие на ту же ошибочную цифру стирает её
+          saveHistorySnapshot();
+          state.board[idx] = 0;
+          playTone('tap');
+          saveStateToStorage();
+          updateUI();
+          return;
+        }
+
+        saveHistorySnapshot();
+        state.board[idx] = digit;
+        state.notes[idx] = [];
+
+        if (digit === state.solution[idx]) {
+          // Правильный ход! Автоматически стираем связанные заметки в строке, столбце и блоке
+          removePeerNotes(idx, digit);
+          triggerHaptic(12);
+          playTone('place');
+          updateUI(idx, 'pop-anim');
+          checkWinCondition();
+        } else {
+          // Ошибка!
+          state.mistakes++;
+          triggerHaptic([40, 60, 40]);
+          playTone('error');
+          updateUI(idx, 'shake-anim');
+
+          if (state.mistakes >= state.maxMistakes) {
+            handleGameOver();
+          }
+        }
+
+        saveStateToStorage();
+      }
+
+      function handleUndo() {
+        if (state.paused || state.gameOver || state.won) return;
+        if (state.history.length === 0) return;
+
+        const prev = state.history.pop();
+        state.board = prev.board;
+        state.notes = prev.notes;
+        triggerHaptic(10);
+        playTone('tap');
+        saveStateToStorage();
+        updateUI();
+      }
+
+      function handleErase() {
+        if (state.paused || state.gameOver || state.won) return;
+        const idx = state.selectedIdx;
+        if (idx < 0 || state.initial[idx] !== 0) return;
+        // Если цифра уже верна, не стираем её, чтобы не ломать прогресс
+        if (state.board[idx] === state.solution[idx]) return;
+
+        if (state.board[idx] !== 0 || state.notes[idx].length > 0) {
+          saveHistorySnapshot();
+          state.board[idx] = 0;
+          state.notes[idx] = [];
+          triggerHaptic(10);
+          playTone('tap');
+          saveStateToStorage();
+          updateUI();
+        }
+      }
+
+      function toggleNotesMode() {
+        if (state.paused || state.gameOver || state.won) return;
+        state.notesMode = !state.notesMode;
+        triggerHaptic(10);
+        playTone('tap');
+        saveStateToStorage();
+        updateUI();
+      }
+
+      function handleHint() {
+        if (state.paused || state.gameOver || state.won) return;
+        if (state.hints <= 0) return;
+
+        let targetIdx = state.selectedIdx;
+
+        // Если клетка не выбрана или уже правильно заполнена — ищем первую пустую/ошибочную клетку
+        if (targetIdx < 0 || state.board[targetIdx] === state.solution[targetIdx]) {
+          const emptyCells = [];
+          for (let i = 0; i < 81; i++) {
+            if (state.board[i] !== state.solution[i]) {
+              emptyCells.push(i);
+            }
+          }
+          if (emptyCells.length === 0) return;
+          targetIdx = emptyCells[(Math.random() * emptyCells.length) | 0];
+          state.selectedIdx = targetIdx;
+        }
+
+        saveHistorySnapshot();
+        const correctDigit = state.solution[targetIdx];
+        state.board[targetIdx] = correctDigit;
+        state.notes[targetIdx] = [];
+        state.hints--;
+
+        removePeerNotes(targetIdx, correctDigit);
+        triggerHaptic([15, 40, 20]);
+        playTone('place');
+        saveStateToStorage();
+        updateUI(targetIdx, 'pop-anim');
+        checkWinCondition();
+      }
+
+      function checkWinCondition() {
+        for (let i = 0; i < 81; i++) {
+          if (state.board[i] !== state.solution[i]) return false;
+        }
+
+        state.won = true;
+        stopTimer();
+        triggerHaptic([30, 50, 30, 50, 60]);
+        playTone('win');
+
+        // Проверяем и обновляем рекорд
+        const prevBest = bestTimes[state.difficultyId];
+        let isNewRecord = false;
+        if (!prevBest || state.seconds < prevBest) {
+          bestTimes[state.difficultyId] = state.seconds;
+          isNewRecord = true;
+          saveRecordsToStorage();
+        }
+
+        clearSavedGame();
+        updateUI();
+
+        const diffObj = DIFFICULTIES.find(d => d.id === state.difficultyId) || DIFFICULTIES[2];
+        document.getElementById('winDiffText').textContent = diffObj.name;
+        document.getElementById('winTimeText').textContent = formatTime(state.seconds);
+        document.getElementById('winBestText').textContent = formatTime(bestTimes[state.difficultyId]);
+        document.getElementById('newRecordBanner').style.display = isNewRecord ? 'block' : 'none';
+
+        setTimeout(() => {
+          openModal(winModal);
+        }, 320);
+
+        return true;
+      }
+
+      function handleGameOver() {
+        state.gameOver = true;
+        stopTimer();
+        clearSavedGame();
+        setTimeout(() => {
+          openModal(gameOverModal);
+        }, 300);
+      }
+
+      /* ==========================================
+         УПРАВЛЕНИЕ ПАРТИЕЙ И ТАЙМЕРОМ
+         ========================================== */
+      function startNewGame(difficultyId = state.difficultyId) {
+        const diffObj = DIFFICULTIES.find(d => d.id === difficultyId) || DIFFICULTIES[2];
+        const { puzzle, solution } = generateSudokuPuzzle(diffObj.holes);
+
+        state.difficultyId = diffObj.id;
+        state.initial = puzzle.slice();
+        state.board = puzzle.slice();
+        state.solution = solution.slice();
+        state.notes = Array.from({ length: 81 }, () => []);
+        state.selectedIdx = puzzle.findIndex(v => v === 0);
+        state.notesMode = false;
+        state.mistakes = 0;
+        state.hints = 3;
+        state.seconds = 0;
+        state.paused = false;
+        state.gameOver = false;
+        state.won = false;
+        state.history = [];
+
+        boardEl.classList.remove('paused');
+        closeAllModals();
+        saveStateToStorage();
+        updateUI();
+        startTimer();
+      }
+
+      function retryCurrentPuzzle() {
+        state.board = state.initial.slice();
+        state.notes = Array.from({ length: 81 }, () => []);
+        state.selectedIdx = state.initial.findIndex(v => v === 0);
+        state.mistakes = 0;
+        state.hints = 3;
+        state.seconds = 0;
+        state.paused = false;
+        state.gameOver = false;
+        state.won = false;
+        state.history = [];
+
+        boardEl.classList.remove('paused');
+        closeAllModals();
+        saveStateToStorage();
+        updateUI();
+        startTimer();
+      }
+
+      function formatTime(totalSec) {
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+
+      function startTimer() {
+        stopTimer();
+        timerInterval = setInterval(() => {
+          if (!state.paused && !state.gameOver && !state.won) {
+            state.seconds++;
+            timerTextEl.textContent = formatTime(state.seconds);
+            if (state.seconds % 5 === 0) {
+              saveStateToStorage();
+            }
+          }
+        }, 1000);
+      }
+
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+
+      function pauseGame() {
+        if (state.gameOver || state.won) return;
+        state.paused = true;
+        boardEl.classList.add('paused');
+        openModal(pauseModal);
+      }
+
+      function resumeGame() {
+        state.paused = false;
+        boardEl.classList.remove('paused');
+        closeModal(pauseModal);
+      }
+
+      /* ==========================================
+         МОДАЛЬНЫЕ ОКНА
+         ========================================== */
+      function openModal(modalEl) {
+        modalEl.classList.add('open');
+      }
+
+      function closeModal(modalEl) {
+        modalEl.classList.remove('open');
+      }
+
+      function closeAllModals() {
+        [difficultyModal, pauseModal, winModal, gameOverModal].forEach(m => m.classList.remove('open'));
+      }
+
+      function openDifficultySelector() {
+        diffOptionsList.innerHTML = '';
+        DIFFICULTIES.forEach(diff => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `diff-option-btn ${diff.id === state.difficultyId ? 'current-diff' : ''}`;
+          const rec = bestTimes[diff.id] ? `★ ${formatTime(bestTimes[diff.id])}` : 'Нет рекорда';
+          btn.innerHTML = `
+            <div class="diff-option-left">
+              <span class="diff-option-name">${diff.name}</span>
+              <span class="diff-option-desc">${diff.desc}</span>
+            </div>
+            <span class="diff-option-record">${rec}</span>
+          `;
+          btn.addEventListener('click', () => {
+            triggerHaptic(12);
+            playTone('tap');
+            startNewGame(diff.id);
+          });
+          diffOptionsList.appendChild(btn);
+        });
+        openModal(difficultyModal);
+      }
+
+      /* ==========================================
+         СОХРАНЕНИЕ В LOCALSTORAGE
+         ========================================== */
+      function saveStateToStorage() {
+        if (state.won || state.gameOver) return;
+        try {
+          const payload = {
+            difficultyId: state.difficultyId,
+            initial: state.initial,
+            board: state.board,
+            solution: state.solution,
+            notes: state.notes,
+            selectedIdx: state.selectedIdx,
+            notesMode: state.notesMode,
+            mistakes: state.mistakes,
+            hints: state.hints,
+            seconds: state.seconds,
+            soundEnabled: state.soundEnabled,
+            history: state.history
+          };
+          localStorage.setItem(STORAGE_STATE_KEY, JSON.stringify(payload));
+        } catch (e) {
+          // Игнорируем переполнение или приватный режим Safari
+        }
+      }
+
+      function clearSavedGame() {
+        try {
+          localStorage.removeItem(STORAGE_STATE_KEY);
+        } catch (e) {}
+      }
+
+      function loadRecordsFromStorage() {
+        try {
+          const raw = localStorage.getItem(STORAGE_RECORDS_KEY);
+          if (raw) {
+            bestTimes = JSON.parse(raw) || {};
+          }
+        } catch (e) {
+          bestTimes = {};
+        }
+      }
+
+      function saveRecordsToStorage() {
+        try {
+          localStorage.setItem(STORAGE_RECORDS_KEY, JSON.stringify(bestTimes));
+        } catch (e) {}
+      }
+
+      function restoreOrStartGame() {
+        loadRecordsFromStorage();
+        try {
+          const raw = localStorage.getItem(STORAGE_STATE_KEY);
+          if (raw) {
+            const saved = JSON.parse(raw);
+            if (
+              saved &&
+              Array.isArray(saved.board) &&
+              saved.board.length === 81 &&
+              Array.isArray(saved.solution) &&
+              saved.solution.length === 81
+            ) {
+              state.difficultyId = saved.difficultyId || 'medium';
+              state.initial = saved.initial;
+              state.board = saved.board;
+              state.solution = saved.solution;
+              state.notes = saved.notes || Array.from({ length: 81 }, () => []);
+              state.selectedIdx = typeof saved.selectedIdx === 'number' ? saved.selectedIdx : 0;
+              state.notesMode = !!saved.notesMode;
+              state.mistakes = saved.mistakes || 0;
+              state.hints = typeof saved.hints === 'number' ? saved.hints : 3;
+              state.seconds = saved.seconds || 0;
+              state.soundEnabled = saved.soundEnabled !== undefined ? saved.soundEnabled : true;
+              state.history = Array.isArray(saved.history) ? saved.history : [];
+              state.paused = false;
+              state.gameOver = false;
+              state.won = false;
+
+              updateUI();
+              startTimer();
+              return;
+            }
+          }
+        } catch (e) {
+          // Если сохранение повреждено — запускаем новую игру
+        }
+
+        startNewGame('medium');
+      }
+
+      /* ==========================================
+         ОБРАБОТЧИКИ СОБЫТИЙ И КЛАВИАТУРЫ
+         ========================================== */
+      function bindEvents() {
+        document.getElementById('diffSelectBtn').addEventListener('click', openDifficultySelector);
+        document.getElementById('newGameTopBtn').addEventListener('click', openDifficultySelector);
+        document.getElementById('closeDiffModalBtn').addEventListener('click', () => closeModal(difficultyModal));
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+          state.soundEnabled = !state.soundEnabled;
+          if (state.soundEnabled) playTone('tap');
+          saveStateToStorage();
+          updateUI();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+        document.getElementById('resumeGameBtn').addEventListener('click', resumeGame);
+        document.getElementById('restartFromPauseBtn').addEventListener('click', retryCurrentPuzzle);
+
+        document.getElementById('undoBtn').addEventListener('click', handleUndo);
+        document.getElementById('eraseBtn').addEventListener('click', handleErase);
+        document.getElementById('notesBtn').addEventListener('click', toggleNotesMode);
+        document.getElementById('hintBtn').addEventListener('click', handleHint);
+
+        document.getElementById('winNewGameBtn').addEventListener('click', () => {
+          closeModal(winModal);
+          openDifficultySelector();
+        });
+
+        document.getElementById('retrySameBoardBtn').addEventListener('click', retryCurrentPuzzle);
+        document.getElementById('gameOverNewBtn').addEventListener('click', () => {
+          closeModal(gameOverModal);
+          openDifficultySelector();
+        });
+
+        // Автопауза при сворачивании вкладки Safari
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden && !state.gameOver && !state.won) {
+            saveStateToStorage();
+          }
+        });
+
+        // Поддержка физической клавиатуры для тестирования на Mac / ПК
+        window.addEventListener('keydown', (e) => {
+          if (state.paused || state.gameOver || state.won) return;
+
+          if (e.key >= '1' && e.key <= '9') {
+            e.preventDefault();
+            handleNumberInput(parseInt(e.key, 10));
+          } else if (e.key === 'Backspace' || e.key === 'Delete') {
+            e.preventDefault();
+            handleErase();
+          } else if (e.key === 'n' || e.key === 'N' || e.key === 'т' || e.key === 'Т') {
+            e.preventDefault();
+            toggleNotesMode();
+          } else if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) {
+            e.preventDefault();
+            handleUndo();
+          } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+            let idx = state.selectedIdx >= 0 ? state.selectedIdx : 0;
+            let r = (idx / 9) | 0;
+            let c = idx % 9;
+            if (e.key === 'ArrowUp') r = (r + 8) % 9;
+            if (e.key === 'ArrowDown') r = (r + 1) % 9;
+            if (e.key === 'ArrowLeft') c = (c + 8) % 9;
+            if (e.key === 'ArrowRight') c = (c + 1) % 9;
+            selectCell(r * 9 + c);
+          }
+        });
+      }
+
+      /* ==========================================
+         СТАРТ ПРИЛОЖЕНИЯ
+         ========================================== */
+      buildBoardDOM();
+      buildNumpadDOM();
+      bindEvents();
+      restoreOrStartGame();
+    })();
+  </script>
+</body>
+</html>
